@@ -14,6 +14,7 @@ import java.nio.file.StandardCopyOption;
  */
 public class InventarisBarangFrame extends javax.swing.JFrame {
     private Connection connection;
+    private String selectedBarang;
 
     public InventarisBarangFrame() {
         initDatabase();
@@ -25,29 +26,29 @@ public class InventarisBarangFrame extends javax.swing.JFrame {
     
     private void initDatabase() {
         try {
-            // Menghubungkan ke database SQLite. Jika database tidak ada, maka akan dibuat.
             connection = DriverManager.getConnection("jdbc:sqlite:inventaris.db");
 
-            // SQL statement untuk membuat tabel 'barang' jika belum ada.
+            // SQL statement untuk membuat tabel 'barang' jika belum ada
             String createTableSQL = """
-                CREATE TABLE IF NOT EXISTS barang (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT, // ID unik untuk setiap barang, auto-increment
-                    nama TEXT UNIQUE, // Nama barang, harus unik
-                    jumlah INTEGER, // Jumlah barang
-                    kategori TEXT, // Kategori barang
-                    kondisi TEXT, // Kondisi barang (misal: Bagus, Rusak, dll.)
-                    gambar_path TEXT, // Jalur penyimpanan gambar barang
-                    tanggal_masuk DATE // Tanggal barang masuk ke inventaris
+                CREATE TABLE IF NOT EXISTS "barang" (
+                    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+                    "nama" TEXT UNIQUE,
+                    "jumlah" INTEGER,
+                    "kategori" TEXT,
+                    "kondisi" TEXT,
+                    "gambar_path" TEXT,
+                    "tanggal_masuk" DATE
                 );
             """;
 
-            // Menjalankan SQL statement untuk membuat tabel.
+            // Menjalankan SQL statement untuk membuat tabel
             connection.createStatement().execute(createTableSQL);
         } catch (SQLException e) {
-            // Menampilkan pesan dialog jika terjadi kesalahan saat menghubungkan ke database.
+            // Menampilkan pesan dialog jika terjadi kesalahan saat menghubungkan ke database
             JOptionPane.showMessageDialog(this, "Error connecting to database: " + e.getMessage());
         }
     }
+
 
 
     private void loadCategories() {
@@ -74,6 +75,9 @@ public class InventarisBarangFrame extends javax.swing.JFrame {
 
 
     private void showBarangDetails(String namaBarang) {
+        this.selectedBarang = namaBarang; // Simpan nama barang yang dipilih ke variabel instance
+
+        // Mempersiapkan pernyataan SQL untuk mengambil semua data dari tabel 'barang' yang sesuai dengan nama barang yang diberikan
         try (PreparedStatement pstmt = connection.prepareStatement("SELECT * FROM barang WHERE nama = ?")) {
             // Setel parameter query dengan nama barang yang diberikan
             pstmt.setString(1, namaBarang);
@@ -118,6 +122,8 @@ public class InventarisBarangFrame extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "Error retrieving data: " + e.getMessage());
         }
     }
+
+
 
     
     private void pilihGambar() {
@@ -267,30 +273,33 @@ public class InventarisBarangFrame extends javax.swing.JFrame {
     private void updateBarang() {
         try {
             // Mengambil data dari field input
-            String nama = tfNama.getText();
-            int jumlah = Integer.parseInt(tfJumlah.getText());
-            String kategori = cbKategori.getSelectedItem().toString();
-            String kondisi = rbBagus.isSelected() ? "Bagus" : rbCukup.isSelected() ? "Cukup" : "Rusak";
-            String gambarPath = tfGambarPath.getText();
+            String namaBaru = tfNama.getText(); // Nama barang baru
+            int jumlah = Integer.parseInt(tfJumlah.getText()); // Jumlah barang
+            String kategori = cbKategori.getSelectedItem().toString(); // Kategori barang
+            String kondisi = rbBagus.isSelected() ? "Bagus" : rbCukup.isSelected() ? "Cukup" : "Rusak"; // Kondisi barang
+            String gambarPath = tfGambarPath.getText(); // Jalur gambar barang
+            String namaLama = this.selectedBarang; // Nama barang lama
 
-            // SQL untuk memperbarui data barang berdasarkan nama
+            // SQL untuk memperbarui data barang berdasarkan nama lama
             String sql = """
-                UPDATE barang SET jumlah = ?, kategori = ?, kondisi = ?, gambar_path = ?
+                UPDATE barang SET nama = ?, jumlah = ?, kategori = ?, kondisi = ?, gambar_path = ?
                 WHERE nama = ?
             """;
 
+            // Mempersiapkan pernyataan SQL untuk eksekusi
             try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
                 // Mengatur nilai-nilai parameter dalam pernyataan yang telah dipersiapkan
-                pstmt.setInt(1, jumlah);
-                pstmt.setString(2, kategori);
-                pstmt.setString(3, kondisi);
-                pstmt.setString(4, gambarPath);
-                pstmt.setString(5, nama);
+                pstmt.setString(1, namaBaru); // Nama barang baru
+                pstmt.setInt(2, jumlah); // Jumlah barang
+                pstmt.setString(3, kategori); // Kategori barang
+                pstmt.setString(4, kondisi); // Kondisi barang
+                pstmt.setString(5, gambarPath); // Jalur gambar barang
+                pstmt.setString(6, namaLama); // Nama barang lama dalam klausa WHERE
                 // Menjalankan pernyataan SQL
                 pstmt.executeUpdate();
                 // Menampilkan pesan sukses pembaruan data
                 JOptionPane.showMessageDialog(this, "Data barang berhasil diperbarui!");
-                // Memuat ulang daftar barang
+                // Memuat ulang daftar barang untuk memperbarui tampilan
                 loadBarangList();
             }
         } catch (SQLException e) {
@@ -298,6 +307,9 @@ public class InventarisBarangFrame extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "Gagal memperbarui data: " + e.getMessage());
         }
     }
+
+
+
 
 
     private void searchBarang() {
